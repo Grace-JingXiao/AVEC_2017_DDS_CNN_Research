@@ -123,3 +123,5 @@ dmypy.json
 .pyre/
 *.xml
 *.iml
+RUN/logs/events.out.tfevents.1564565788.LAPTOP-SEJR3SU4
+*.LAPTOP-SEJR3SU4
