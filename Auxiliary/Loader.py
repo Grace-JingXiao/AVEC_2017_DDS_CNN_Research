@@ -2,7 +2,7 @@ import numpy
 import os
 
 
-def Loader_SpeechRecognition(maxSamples=5):
+def Loader_SpeechRecognition(maxSamples=1):
     loadpath = 'D:/PythonProjects_Data/Data_SpeechRecognition/'
 
     totalData, totalLabel, totalSeq = [], [], []
