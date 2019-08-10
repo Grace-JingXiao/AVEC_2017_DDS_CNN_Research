@@ -1,16 +1,18 @@
 import numpy
 import tensorflow
-from Model.Base import NeuralNetwork_Base
-from Auxiliary.Shuffle import Shuffle_Triple
 from tensorflow.contrib import rnn, seq2seq
+from Auxiliary.Shuffle import Shuffle_Triple
+from Model.Base import NeuralNetwork_Base
+from Model.AttentionMechanism.CNN_StandardAttention import CNN_StandardAttention_Initializer
 
 
-class BLSTM_Seq2Seq(NeuralNetwork_Base):
-    def __init__(self, trainData, trainSeq, trainLabel, hiddenNoduleNumber, batchSize=32, learningRate=1E-3,
-                 startFlag=True, graphRevealFlag=True, graphPath='logs/', occupyRate=-1):
+class CNN_Seq2Seq(NeuralNetwork_Base):
+    def __init__(self, trainData, trainSeq, trainLabel, hiddenNoduleNumbers=128, batchSize=32, learningRate=1E-3,
+                 startFlag=True,
+                 graphRevealFlag=True, graphPath='logs/', occupyRate=-1):
         self.dataSeq = trainSeq
-        self.hiddenNoduleNumber = hiddenNoduleNumber
-        super(BLSTM_Seq2Seq, self).__init__(
+        self.hiddenNoduleNumbers = hiddenNoduleNumbers
+        super(CNN_Seq2Seq, self).__init__(
             trainData=trainData, trainLabel=trainLabel, batchSize=batchSize, learningRate=learningRate,
             startFlag=startFlag, graphRevealFlag=graphRevealFlag, graphPath=graphPath, occupyRate=occupyRate)
 
@@ -25,40 +27,55 @@ class BLSTM_Seq2Seq(NeuralNetwork_Base):
             dtype=tensorflow.int32, shape=[self.batchSize], name='labelSeqInput')
 
         self.parameters['EmbeddingDictionary'] = tensorflow.Variable(
-            initial_value=tensorflow.truncated_normal([50, 256]), dtype=tensorflow.float32, name='EmbeddingDictionary')
-        self.parameters['EmbeddingResult'] = tensorflow.nn.embedding_lookup(
-            params=self.parameters['EmbeddingDictionary'], ids=self.labelInput, name='EmbeddingResult')
+            initial_value=tensorflow.truncated_normal([50, 2 * self.hiddenNoduleNumbers]), dtype=tensorflow.float32,
+            name='EmbeddingDictionary')
 
         with tensorflow.name_scope('Encoder'):
-            self.parameters['Encoder_FW_Cell'] = rnn.LSTMCell(num_units=self.hiddenNoduleNumber, name='Encoder_FW_Cell')
-            self.parameters['Encoder_BW_Cell'] = rnn.LSTMCell(num_units=self.hiddenNoduleNumber, name='Encoder_BW_Cell')
-            [self.parameters['Encoder_FW_Output'], self.parameters['Encoder_BW_Output']], \
-            [self.parameters['Encoder_FW_FinalState'], self.parameters['Encoder_BW_FinalState']] = \
-                tensorflow.nn.bidirectional_dynamic_rnn(
-                    cell_fw=self.parameters['Encoder_FW_Cell'], cell_bw=self.parameters['Encoder_BW_Cell'],
-                    inputs=self.dataInput, sequence_length=self.dataSeqInput, dtype=tensorflow.float32)
-            self.parameters['EncoderOutput'] = tensorflow.concat(
-                [self.parameters['Encoder_FW_Output'], self.parameters['Encoder_BW_Output']], axis=2,
-                name='EncoderOutput')
-            self.parameters['Encoder_FinalState_C'] = tensorflow.concat(
-                [self.parameters['Encoder_FW_FinalState'].c, self.parameters['Encoder_BW_FinalState'].c], axis=1,
-                name='Encoder_FinalState_C')
-            self.parameters['Encoder_FinalState_H'] = tensorflow.concat(
-                [self.parameters['Encoder_FW_FinalState'].h, self.parameters['Encoder_BW_FinalState'].h], axis=1,
-                name='Encoder_FinalState_H')
-            self.parameters['Encoder_FinalState'] = rnn.LSTMStateTuple(
-                c=self.parameters['Encoder_FinalState_C'], h=self.parameters['Encoder_FinalState_H'])
+            self.parameters['Layer1st_Conv'] = tensorflow.layers.conv2d(
+                inputs=self.dataInput[:, :, :, tensorflow.newaxis], filters=8, kernel_size=[3, 3], strides=[1, 1],
+                padding='SAME', name='Layer1st_Conv')
+            self.parameters['Layer1st_MaxPooling'] = tensorflow.layers.max_pooling2d(
+                inputs=self.parameters['Layer1st_Conv'], pool_size=[3, 3], strides=[2, 1], padding='SAME',
+                name='Layer1st_MaxPooling')
+            self.parameters['Layer2nd_Conv'] = tensorflow.layers.conv2d(
+                inputs=self.parameters['Layer1st_MaxPooling'], filters=16, kernel_size=[3, 3], strides=[1, 1],
+                padding='SAME', name='Layer2nd_Conv')
+            self.parameters['Layer2nd_MaxPooling'] = tensorflow.layers.max_pooling2d(
+                inputs=self.parameters['Layer2nd_Conv'], pool_size=[3, 3], strides=[2, 1], padding='SAME',
+                name='Layer2nd_MaxPooling')
+            self.parameters['Layer3rd_Conv'] = tensorflow.layers.conv2d(
+                inputs=self.parameters['Layer2nd_MaxPooling'], filters=16, kernel_size=[3, 3], strides=[1, 1],
+                padding='SAME', name='Layer3rd_Conv')
 
-        #################################################################################
+        ###############################################################################
+
+        self.parameters['AttentionList'] = CNN_StandardAttention_Initializer(
+            inputData=self.parameters['Layer3rd_Conv'], inputSeq=self.dataSeqInput, attentionScope=None,
+            hiddenNoduleNumber=16, scopeName='CSA')
+        self.parameters['AttentionResult'] = self.parameters['AttentionList']['FinalResult']
+
+        ###############################################################################
+
+        self.parameters['DecoderInitialState_C'] = tensorflow.layers.dense(
+            inputs=self.parameters['AttentionResult'], units=2 * self.hiddenNoduleNumbers, activation=None,
+            name='DecoderInitialState_C')
+        self.parameters['DecoderInitialState_H'] = tensorflow.layers.dense(
+            inputs=self.parameters['AttentionResult'], units=2 * self.hiddenNoduleNumbers, activation=None,
+            name='DecoderInitialState_H')
+        self.parameters['DecoderInitialState'] = rnn.LSTMStateTuple(
+            c=self.parameters['DecoderInitialState_C'], h=self.parameters['DecoderInitialState_H'])
+
+        ###############################################################################
 
         self.parameters['Helper'] = seq2seq.GreedyEmbeddingHelper(
             embedding=self.parameters['EmbeddingDictionary'],
             start_tokens=tensorflow.ones(self.batchSize, dtype=tensorflow.int32) * 40,
             end_token=0)
-        self.parameters['Decoder_Cell'] = rnn.LSTMCell(num_units=2 * self.hiddenNoduleNumber)
+        self.parameters['Decoder_Cell'] = rnn.LSTMCell(num_units=2 * self.hiddenNoduleNumbers)
         self.parameters['Decoder'] = seq2seq.BasicDecoder(
             cell=self.parameters['Decoder_Cell'], helper=self.parameters['Helper'],
-            initial_state=self.parameters['Encoder_FinalState'])
+            initial_state=self.parameters['DecoderInitialState'])
+
         self.parameters['DecoderOutput'], self.parameters['DecoderFinalState'], self.parameters['DecoderSeqLen'] = \
             seq2seq.dynamic_decode(decoder=self.parameters['Decoder'], output_time_major=False,
                                    maximum_iterations=tensorflow.reduce_max(self.labelSeqInput))
@@ -107,7 +124,8 @@ class BLSTM_Seq2Seq(NeuralNetwork_Base):
                 batchDataSeq = self.dataSeq[startPosition:startPosition + self.batchSize]
                 batchLabel, batchLabelSeq = self.__LabelPretreatment(
                     treatLabel=self.label[startPosition:startPosition + self.batchSize])
-
+                # print(numpy.shape(batchData),numpy.shape(batchDataSeq),numpy.shape(batchLabel),numpy.shape(batchLabelSeq))
+                # exit()
                 loss, _ = self.session.run(
                     fetches=[self.parameters['Loss'], self.train],
                     feed_dict={self.dataInput: batchData, self.dataSeqInput: batchDataSeq, self.labelInput: batchLabel,
@@ -117,6 +135,3 @@ class BLSTM_Seq2Seq(NeuralNetwork_Base):
                 totalLoss += loss
                 file.write(str(loss) + '\n')
         return totalLoss
-
-    def Test(self):
-        pass
