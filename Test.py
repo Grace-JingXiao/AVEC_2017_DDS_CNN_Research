@@ -1,7 +1,3 @@
-from jiwer import wer
+import tensorflow
 
-ground_truth = "hello ducek world"
-hypothesis = "hello world duck"
-
-error = wer(ground_truth, hypothesis)
-print(error)
+print(tensorflow.__version__)
