@@ -7,9 +7,10 @@ from Model.AttentionMechanism.RNN_StandardAttention import RNN_StandardAttention
 
 
 class SingleCNN(NeuralNetwork_Base):
-    def __init__(self, trainData, trainSeq, trainLabel, rnnLayers=1, hiddenNodules=128, batchSize=32, learningRate=1E-3,
-                 startFlag=True, graphRevealFlag=True, graphPath='logs/', occupyRate=-1):
+    def __init__(self, trainData, trainSeq, trainLabel, convSize=2, rnnLayers=1, hiddenNodules=128, batchSize=32,
+                 learningRate=1E-3, startFlag=True, graphRevealFlag=True, graphPath='logs/', occupyRate=-1):
         self.dataSeq = trainSeq
+        self.convSize = convSize
         self.rnnLayers = rnnLayers
         self.hiddenNodules = hiddenNodules
         super(SingleCNN, self).__init__(
@@ -22,14 +23,14 @@ class SingleCNN(NeuralNetwork_Base):
         self.seqInput = tensorflow.placeholder(dtype=tensorflow.int32, shape=[None], name='SeqInput')
 
         self.parameters['Layer1st_Conv'] = tensorflow.layers.conv2d(
-            inputs=self.dataInput[:, :, :, tensorflow.newaxis], filters=8, kernel_size=[2, 2], strides=[1, 1],
-            padding='SAME', name='Layer1st_Conv')
+            inputs=self.dataInput[:, :, :, tensorflow.newaxis], filters=8, kernel_size=[self.convSize, self.convSize],
+            strides=[1, 1], padding='SAME', name='Layer1st_Conv')
         self.parameters['Layer2nd_MaxPooling'] = tensorflow.layers.max_pooling2d(
             inputs=self.parameters['Layer1st_Conv'], pool_size=[3, 3], strides=[2, 2], padding='SAME',
             name='Layer2nd_MaxPooling')
         self.parameters['Layer3rd_Conv'] = tensorflow.layers.conv2d(
-            inputs=self.parameters['Layer2nd_MaxPooling'], filters=16, kernel_size=[2, 2], strides=[1, 1],
-            padding='SAME', name='Layer3rd_Conv')
+            inputs=self.parameters['Layer2nd_MaxPooling'], filters=16, kernel_size=[self.convSize, self.convSize],
+            strides=[1, 1], padding='SAME', name='Layer3rd_Conv')
         self.parameters['Layer4th_Reshape'] = tensorflow.reshape(
             tensor=self.parameters['Layer3rd_Conv'], shape=[-1, 500, 20 * 16], name='Layer4th_Reshape')
 
@@ -80,3 +81,11 @@ class SingleCNN(NeuralNetwork_Base):
                 totalLoss += loss
                 file.write(str(loss) + '\n')
         return totalLoss
+
+    def Test(self, savepath, testData, testLabel, testSeq):
+        with open(savepath, 'w') as file:
+            for index in range(numpy.shape(testData)[0]):
+                predict = self.session.run(
+                    fetches=self.parameters['Predict'],
+                    feed_dict={self.dataInput: testData[index], self.seqInput: testSeq[index]})
+                file.write(str(testLabel[index]) + ',' + str(predict[0][0]) + '\n')
