@@ -3,16 +3,20 @@ import tensorflow
 from tensorflow.contrib import rnn
 from Model.Base import NeuralNetwork_Base
 from Auxiliary.Shuffle import Shuffle_Triple
-from Model.AttentionMechanism.RNN_StandardAttention import RNN_StandardAttentionInitializer
 
 
 class SingleCNN(NeuralNetwork_Base):
-    def __init__(self, trainData, trainSeq, trainLabel, convSize=2, rnnLayers=1, hiddenNodules=128, batchSize=32,
-                 learningRate=1E-3, startFlag=True, graphRevealFlag=True, graphPath='logs/', occupyRate=-1):
+    def __init__(self, trainData, trainSeq, trainLabel, firstAttention, firstAttentionName, firstAttentionScope,
+                 secondAttention, secondAttentionName, secondAttentionScope, convSize=2, rnnLayers=1, hiddenNodules=128,
+                 batchSize=32, learningRate=1E-3, startFlag=True, graphRevealFlag=True, graphPath='logs/',
+                 occupyRate=-1):
         self.dataSeq = trainSeq
         self.convSize = convSize
         self.rnnLayers = rnnLayers
         self.hiddenNodules = hiddenNodules
+        self.firstAttention, self.firstAttentionName, self.firstAttentionScope = firstAttention, firstAttentionName, firstAttentionScope
+        self.secondAttention, self.secondAttentionName, self.secondAttentionScope = secondAttention, secondAttentionName, secondAttentionScope
+
         super(SingleCNN, self).__init__(
             trainData=trainData, trainLabel=trainLabel, batchSize=batchSize, learningRate=learningRate,
             startFlag=startFlag, graphRevealFlag=graphRevealFlag, graphPath=graphPath, occupyRate=occupyRate)
@@ -24,19 +28,20 @@ class SingleCNN(NeuralNetwork_Base):
 
         self.parameters['Layer1st_Conv'] = tensorflow.layers.conv2d(
             inputs=self.dataInput[:, :, :, tensorflow.newaxis], filters=8, kernel_size=[self.convSize, self.convSize],
-            strides=[1, 1], padding='SAME', name='Layer1st_Conv')
+            strides=[1, 1], padding='SAME', activation=tensorflow.nn.relu, name='Layer1st_Conv')
         self.parameters['Layer2nd_MaxPooling'] = tensorflow.layers.max_pooling2d(
             inputs=self.parameters['Layer1st_Conv'], pool_size=[3, 3], strides=[2, 2], padding='SAME',
             name='Layer2nd_MaxPooling')
         self.parameters['Layer3rd_Conv'] = tensorflow.layers.conv2d(
             inputs=self.parameters['Layer2nd_MaxPooling'], filters=16, kernel_size=[self.convSize, self.convSize],
-            strides=[1, 1], padding='SAME', name='Layer3rd_Conv')
+            strides=[1, 1], padding='SAME', activation=tensorflow.nn.relu, name='Layer3rd_Conv')
         self.parameters['Layer4th_Reshape'] = tensorflow.reshape(
             tensor=self.parameters['Layer3rd_Conv'], shape=[-1, 500, 20 * 16], name='Layer4th_Reshape')
 
-        self.parameters['AttentionMechanism'] = RNN_StandardAttentionInitializer(
-            dataInput=self.parameters['Layer4th_Reshape'], seqInput=self.seqInput, scopeName='RSA',
-            hiddenNoduleNumber=16 * 20, attentionScope=None, blstmFlag=False)
+        self.parameters['AttentionMechanism'] = self.firstAttention(
+            dataInput=self.parameters['Layer4th_Reshape'], seqInput=self.seqInput,
+            scopeName=self.firstAttentionName + '_Frame', hiddenNoduleNumber=16 * 20,
+            attentionScope=self.firstAttentionScope, blstmFlag=False)
         self.parameters['AttentionResult'] = self.parameters['AttentionMechanism']['FinalResult']
 
         self.parameters['BLSTM_FW_Cell'] = tensorflow.nn.rnn_cell.MultiRNNCell(
@@ -48,9 +53,9 @@ class SingleCNN(NeuralNetwork_Base):
                 cell_fw=self.parameters['BLSTM_FW_Cell'], cell_bw=self.parameters['BLSTM_BW_Cell'],
                 inputs=self.parameters['AttentionResult'][tensorflow.newaxis, :, :], dtype=tensorflow.float32)
 
-        self.parameters['BLSTM_AttentionMechanism'] = RNN_StandardAttentionInitializer(
-            dataInput=self.parameters['BLSTM_Output'], seqInput=None, scopeName='RSA_Sentence',
-            hiddenNoduleNumber=2 * self.hiddenNodules, attentionScope=None, blstmFlag=True)
+        self.parameters['BLSTM_AttentionMechanism'] = self.secondAttention(
+            dataInput=self.parameters['BLSTM_Output'], seqInput=None, scopeName=self.secondAttentionName + '_Sentence',
+            hiddenNoduleNumber=2 * self.hiddenNodules, attentionScope=self.secondAttentionScope, blstmFlag=True)
         self.parameters['BLSTM_Result'] = self.parameters['BLSTM_AttentionMechanism']['FinalResult']
         self.parameters['Predict'] = tensorflow.layers.dense(
             inputs=self.parameters['BLSTM_Result'], units=1, activation=None)

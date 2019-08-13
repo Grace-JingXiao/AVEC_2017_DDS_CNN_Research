@@ -2,14 +2,25 @@ import os
 import numpy
 from Auxiliary.Loader import Loader_CNN
 from Model.DepressionRecognition.MultiCNN import SingleCNN
+from Model.AttentionMechanism.RNN_StandardAttention import RNN_StandardAttentionInitializer
 
 if __name__ == '__main__':
     convSize = 4
     trainData, trainLabel, trainSeq, developData, developLabel, developSeq, testData, testLabel, testSeq = Loader_CNN(
         partName='CNN-10-Seq')
-    classifier = SingleCNN(trainData=trainData, trainSeq=trainSeq, trainLabel=trainLabel, convSize=convSize)
+    firstAttention = RNN_StandardAttentionInitializer
+    firstAttentionName = 'RSA'
+    firstAttentionScope = None
+    secondAttention = RNN_StandardAttentionInitializer
+    secondAttentionName = 'RSA'
+    secondAttentionScope = None
 
-    savepath = 'D:/PythonProjects_Data/Exp/CRNN-%d' % convSize
+    classifier = SingleCNN(
+        trainData=trainData, trainSeq=trainSeq, trainLabel=trainLabel, convSize=convSize, firstAttention=firstAttention,
+        firstAttentionName=firstAttentionName, firstAttentionScope=firstAttentionScope, secondAttention=secondAttention,
+        secondAttentionName=secondAttentionName, secondAttentionScope=secondAttentionScope)
+
+    savepath = '/mnt/external/Bobs/AVEC2017/Exp/CRNN-%s-%s-%d' % (firstAttentionName, secondAttentionName, convSize)
     os.makedirs(savepath)
     os.makedirs(savepath + '-TestResult')
 
