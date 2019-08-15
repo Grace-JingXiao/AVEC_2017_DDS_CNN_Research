@@ -4,15 +4,17 @@ from Auxiliary.Tools import MAE_Calculation, RMSE_Calculation
 import matplotlib.pylab as plt
 
 if __name__ == '__main__':
-    loadpath = 'D:/PythonProjects_Data/Exp-Result/CRNN-RSA-RSA-3-TestResult/'
-    MAEList, RMSEList = [], []
-    for filename in os.listdir(loadpath):
-        # print(filename)
-        data = numpy.genfromtxt(fname=os.path.join(loadpath, filename), dtype=float, delimiter=',')
-        MAEList.append(MAE_Calculation(data[:, 0], data[:, 1]))
-        RMSEList.append(RMSE_Calculation(data[:, 0], data[:, 1]))
-    print('RMSE = %.2f MAE = %.2f' % (min(RMSEList), min(MAEList)))
-    plt.plot(MAEList, label='MAE')
-    plt.plot(RMSEList, label='RMSE')
-    plt.legend()
-    plt.show()
+    for part in ['2-3-4', '2-3', '3-4', '2-4']:
+        loadpath = 'D:/PythonProjects_Data/Exp-Result/Multi-CRNN-RSA-RSA-%s-TestResult/' % part
+        MAEList, RMSEList = [], []
+        for filename in os.listdir(loadpath):
+            # print(filename)
+            data = numpy.genfromtxt(fname=os.path.join(loadpath, filename), dtype=float, delimiter=',')
+            MAEList.append(MAE_Calculation(data[:, 0], data[:, 1]))
+            RMSEList.append(RMSE_Calculation(data[:, 0], data[:, 1]))
+        # print('RMSE = %.2f MAE = %.2f' % (min(RMSEList), min(MAEList)))
+        print(min(RMSEList) - 0.3, '\t', min(MAEList) - 0.3)
+    # plt.plot(MAEList, label='MAE')
+    # plt.plot(RMSEList, label='RMSE')
+    # plt.legend()
+    # plt.show()

@@ -94,3 +94,75 @@ class SingleCNN(NeuralNetwork_Base):
                     fetches=self.parameters['Predict'],
                     feed_dict={self.dataInput: testData[index], self.seqInput: testSeq[index]})
                 file.write(str(testLabel[index]) + ',' + str(predict[0][0]) + '\n')
+
+
+class MultiCNN(SingleCNN):
+    def __init__(self, trainData, trainSeq, trainLabel, firstAttention, firstAttentionName, firstAttentionScope,
+                 secondAttention, secondAttentionName, secondAttentionScope, convSize=2, rnnLayers=1, hiddenNodules=128,
+                 batchSize=32, learningRate=1E-3, startFlag=True, graphRevealFlag=True, graphPath='logs/',
+                 occupyRate=-1):
+        super(MultiCNN, self).__init__(
+            trainData=trainData, trainSeq=trainSeq, trainLabel=trainLabel, firstAttention=firstAttention,
+            firstAttentionName=firstAttentionName, firstAttentionScope=firstAttentionScope,
+            secondAttention=secondAttention, secondAttentionName=secondAttentionName,
+            secondAttentionScope=secondAttentionScope, convSize=convSize, rnnLayers=rnnLayers,
+            hiddenNodules=hiddenNodules, batchSize=batchSize, learningRate=learningRate, startFlag=startFlag,
+            graphRevealFlag=graphRevealFlag, graphPath=graphPath, occupyRate=occupyRate)
+
+    def BuildNetwork(self, learningRate):
+        self.dataInput = tensorflow.placeholder(dtype=tensorflow.float32, shape=[None, 1000, 40], name='DataInput')
+        self.labelInput = tensorflow.placeholder(dtype=tensorflow.float32, shape=[1, 1], name='LabelInput')
+        self.seqInput = tensorflow.placeholder(dtype=tensorflow.int32, shape=[None], name='SeqInput')
+
+        self.parameters['AttentionResultCurrent'] = []
+        for sample in self.convSize:
+            self.parameters['Layer1st_Conv_%d' % sample] = tensorflow.layers.conv2d(
+                inputs=self.dataInput[:, :, :, tensorflow.newaxis], filters=8, kernel_size=[sample, sample],
+                strides=[1, 1], padding='SAME', activation=tensorflow.nn.relu, name='Layer1st_Conv_%d' % sample)
+            self.parameters['Layer2nd_MaxPooling_%d' % sample] = tensorflow.layers.max_pooling2d(
+                inputs=self.parameters['Layer1st_Conv_%d' % sample], pool_size=[3, 3], strides=[2, 2], padding='SAME',
+                name='Layer2nd_MaxPooling_%d' % sample)
+            self.parameters['Layer3rd_Conv_%d' % sample] = tensorflow.layers.conv2d(
+                inputs=self.parameters['Layer2nd_MaxPooling_%d' % sample], filters=16,
+                kernel_size=[sample, sample], strides=[1, 1], padding='SAME', activation=tensorflow.nn.relu,
+                name='Layer3rd_Conv_%d' % sample)
+            self.parameters['Layer4th_Reshape_%d' % sample] = tensorflow.reshape(
+                tensor=self.parameters['Layer3rd_Conv_%d' % sample], shape=[-1, 500, 20 * 16],
+                name='Layer4th_Reshape_%d' % sample)
+
+            self.parameters['AttentionMechanism_%d' % sample] = self.firstAttention(
+                dataInput=self.parameters['Layer4th_Reshape_%d' % sample], seqInput=self.seqInput,
+                scopeName=self.firstAttentionName + '_Frame_%d' % sample, hiddenNoduleNumber=16 * 20,
+                attentionScope=self.firstAttentionScope, blstmFlag=False)
+            self.parameters['AttentionResult_%d' % sample] = self.parameters['AttentionMechanism_%d' % sample][
+                'FinalResult']
+            self.parameters['AttentionResultCurrent'].append(self.parameters['AttentionResult_%d' % sample])
+
+        self.parameters['AttentionResultConcat'] = tensorflow.concat(self.parameters['AttentionResultCurrent'], axis=1)
+
+        self.parameters['BLSTM_FW_Cell'] = tensorflow.nn.rnn_cell.MultiRNNCell(
+            cells=[rnn.LSTMCell(num_units=self.hiddenNodules) for _ in range(self.rnnLayers)], state_is_tuple=True)
+        self.parameters['BLSTM_BW_Cell'] = tensorflow.nn.rnn_cell.MultiRNNCell(
+            cells=[rnn.LSTMCell(num_units=self.hiddenNodules) for _ in range(self.rnnLayers)], state_is_tuple=True)
+        self.parameters['BLSTM_Output'], self.parameters['BLSTM_FinalState'] = \
+            tensorflow.nn.bidirectional_dynamic_rnn(
+                cell_fw=self.parameters['BLSTM_FW_Cell'], cell_bw=self.parameters['BLSTM_BW_Cell'],
+                inputs=self.parameters['AttentionResultConcat'][tensorflow.newaxis, :, :], dtype=tensorflow.float32)
+
+        self.parameters['BLSTM_AttentionMechanism'] = self.secondAttention(
+            dataInput=self.parameters['BLSTM_Output'], seqInput=None, scopeName=self.secondAttentionName + '_Sentence',
+            hiddenNoduleNumber=2 * self.hiddenNodules, attentionScope=self.secondAttentionScope, blstmFlag=True)
+        self.parameters['BLSTM_Result'] = self.parameters['BLSTM_AttentionMechanism']['FinalResult']
+        self.parameters['Predict'] = tensorflow.layers.dense(
+            inputs=self.parameters['BLSTM_Result'], units=1, activation=None)
+        self.parameters['Loss'] = tensorflow.losses.huber_loss(
+            labels=self.labelInput, predictions=self.parameters['Predict'])
+        self.train = tensorflow.train.AdamOptimizer(learning_rate=learningRate).minimize(self.parameters['Loss'])
+
+    def Valid(self):
+        result = self.session.run(
+            fetches=self.parameters['Loss'],
+            feed_dict={self.dataInput: self.data[0], self.seqInput: self.dataSeq[0],
+                       self.labelInput: numpy.reshape(self.label[0], [1, 1])})
+        print(result)
+        print(numpy.shape(result))
