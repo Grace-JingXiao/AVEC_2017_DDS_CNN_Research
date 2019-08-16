@@ -2,6 +2,15 @@ import numpy
 import random
 
 
+def Shuffle_Single(a):
+    index = numpy.arange(0, len(a))
+    random.shuffle(index)
+    newA = []
+    for sample in index:
+        newA.append(a[sample])
+    return newA
+
+
 def Shuffle_Double(a, b):
     if len(a) != len(b):
         raise RuntimeError("Input Don't Have Same Len.")
