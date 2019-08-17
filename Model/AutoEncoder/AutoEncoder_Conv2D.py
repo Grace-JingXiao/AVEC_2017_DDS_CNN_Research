@@ -32,7 +32,7 @@ class AutoEncoder_Conv2D(NeuralNetwork_Base):
         self.parameters['Predict'] = tensorflow.layers.conv2d_transpose(
             inputs=self.parameters['Layer5th_Transpose'], filters=1, kernel_size=[5, 5], strides=[2, 2], padding='SAME',
             activation=None, name='Predict')
-        self.parameters['Loss'] = tensorflow.losses.absolute_difference(
+        self.parameters['Loss'] = tensorflow.losses.huber_loss(
             labels=self.dataInput[:, :, :, tensorflow.newaxis], predictions=self.parameters['Predict'], weights=10)
         self.train = tensorflow.train.AdamOptimizer(learning_rate=learningRate).minimize(self.parameters['Loss'])
 

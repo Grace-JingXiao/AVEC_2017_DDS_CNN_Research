@@ -1,18 +1,15 @@
 import os
 import numpy
 from Auxiliary.Loader import Loader_CNN
-from Model.AutoEncoder.AutoEncoder_Conv2D import AutoEncoder_Conv2D
+from Model.AutoEncoder.AutoEncoder_Conv3D import AutoEncoder_Conv3D
 
 if __name__ == '__main__':
     trainData, trainLabel, trainSeq, developData, developLabel, developSeq, testData, testLabel, testSeq = Loader_CNN(
         partName='CNN-10-Seq')
-    totalData = []
-    for treat in [trainData, developData, testData]:
-        for sample in treat: totalData.extend(sample)
-    print(numpy.shape(totalData))
 
-    classifier = AutoEncoder_Conv2D(trainData=totalData, learningRate=5E-4, batchSize=256)
-    savepath = 'D:/PythonProjects_Data/Exp/Conv2D/'
+    classifier = AutoEncoder_Conv3D(
+        trainData=numpy.concatenate([trainData, developData, testData], axis=0)[0:1], learningRate=1E-3)
+    savepath = 'D:/PythonProjects_Data/Exp/Conv3D/'
     os.makedirs(savepath)
 
     for episode in range(100):
