@@ -60,3 +60,19 @@ class AutoEncoder_Conv3D(NeuralNetwork_Base):
                 print('\rTraining %d/%d Loss = %f' % (index, numpy.shape(trainData)[0], loss), end='')
                 file.write(str(loss) + '\n')
         return totalLoss
+
+    def MiddleResultGenerate(self, savepath, testData):
+        with open(savepath, 'w') as file:
+            for index in range(numpy.shape(testData)[0]):
+                sampleData = testData[index]
+                if numpy.shape(sampleData)[0] < 128:
+                    sampleData = numpy.concatenate([sampleData, numpy.zeros(
+                        [128 - numpy.shape(sampleData)[0], numpy.shape(sampleData)[1], numpy.shape(sampleData)[2]])])
+                result = self.session.run(fetches=self.parameters['Layer3rd_Conv'],
+                                          feed_dict={self.dataInput: sampleData})
+                result = numpy.reshape(result, [1, 128 * 4 * 25])
+
+                for indexX in range(numpy.shape(result)[1]):
+                    if indexX != 0: file.write(',')
+                    file.write(str(result[0][indexX]))
+                file.write('\n')

@@ -56,3 +56,18 @@ class AutoEncoder_Conv2D(NeuralNetwork_Base):
                 totalLoss += loss
                 file.write(str(loss) + '\n')
         return totalLoss
+
+    def MiddleResultGenerate(self, savepath, testData):
+        for index in range(numpy.shape(testData)[0]):
+            result = self.session.run(fetches=self.parameters['Layer3rd_Conv'],
+                                      feed_dict={self.dataInput: testData[index]})
+            with open(savepath+'%04d.csv'%index,'w') as file:
+                # print(numpy.shape(result))
+                result = numpy.reshape(result, [-1, 25 * 128])
+                for indexX in range(numpy.shape(result)[0]):
+                    for indexY in range(numpy.shape(result)[1]):
+                        if indexY != 0: file.write(',')
+                        file.write(str(result[indexX][indexY]))
+                    file.write('\n')
+                print('\rTreating %d/%d' % (index, numpy.shape(testData)[0]), end='')
+            # exit()
