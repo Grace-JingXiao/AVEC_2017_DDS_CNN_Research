@@ -76,5 +76,30 @@ def Loader_SpeechRecognition(maxSamples=1):
     return totalData, totalLabel, totalSeq
 
 
+def Loader_AutoEncoderResult(maxSentence=5):
+    loadpath = 'D:/PythonProjects_Data/Data_AVEC2017_CNN/AutoEncoder-Normalization/'
+    trainDataSentence, developDataSentence, testDataSentence = [], [], []
+    trainDataInterview = numpy.genfromtxt(
+        fname=os.path.join(loadpath, 'Conv3D-TrainData.csv'), dtype=float, delimiter=',')[0:maxSentence]
+    developDataInterview = numpy.genfromtxt(
+        fname=os.path.join(loadpath, 'Conv3D-DevelopData.csv'), dtype=float, delimiter=',')[0:maxSentence]
+    testDataInterview = numpy.genfromtxt(
+        fname=os.path.join(loadpath, 'Conv3D-TestData.csv'), dtype=float, delimiter=',')[0:maxSentence]
+
+    for foldname in ['Conv2D-TrainData', 'Conv2D-DevelopData', 'Conv2D-TestData']:
+        for index in range(maxSentence):
+            filename = '%04d.csv' % index
+            if not os.path.exists(os.path.join(loadpath, foldname, filename)): continue
+            print('Loading', foldname, filename)
+            data = numpy.genfromtxt(fname=os.path.join(loadpath, foldname, filename), dtype=float, delimiter=',')
+            if foldname.find('TrainData') != -1: trainDataSentence.append(data)
+            if foldname.find('DevelopData') != -1: developDataSentence.append(data)
+            if foldname.find('TestData') != -1: testDataSentence.append(data)
+
+    print(numpy.shape(trainDataSentence), numpy.shape(developDataSentence), numpy.shape(testDataSentence))
+    print(numpy.shape(trainDataInterview), numpy.shape(developDataInterview), numpy.shape(testDataInterview))
+    return trainDataSentence, developDataSentence, testDataSentence, trainDataInterview, developDataInterview, testDataInterview
+
+
 if __name__ == '__main__':
-    Loader_CNN(partName='CNN-10-Seq', maxSentence=9999)
+    Loader_AutoEncoderResult()

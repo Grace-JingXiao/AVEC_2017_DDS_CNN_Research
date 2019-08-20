@@ -4,8 +4,8 @@ from Auxiliary.Tools import MAE_Calculation, RMSE_Calculation
 import matplotlib.pylab as plt
 
 if __name__ == '__main__':
-    for part in ['2-3-4', '2-3', '3-4', '2-4']:
-        loadpath = 'D:/PythonProjects_Data/Exp-Result/Multi-CRNN-RSA-RSA-%s-TestResult/' % part
+    for part in ['First', 'Second', 'Both']:
+        loadpath = 'D:/PythonProjects_Data/Exp-SRWithAE/%s-Multi-CRNN-RMA-RMA-2-3-4-TestResult/' % part
         MAEList, RMSEList = [], []
         for filename in os.listdir(loadpath):
             # print(filename)
