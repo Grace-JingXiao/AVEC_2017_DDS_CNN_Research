@@ -136,3 +136,36 @@ class MultiCNN_Seq2Seq(NeuralNetwork_Base):
                 totalLoss += loss
                 file.write(str(loss) + '\n')
         return totalLoss
+
+    def MiddleResultGeneration(self, testData, testLabel, testSeq):
+        startPosition, totalLoss = 0, 0.0
+        while startPosition + self.batchSize < numpy.shape(testData)[0]:
+            batchData = testData[startPosition:startPosition + self.batchSize]
+            batchDataSeq = testSeq[startPosition:startPosition + self.batchSize]
+            batchLabel, batchLabelSeq = self.__LabelPretreatment(
+                treatLabel=testLabel[startPosition:startPosition + self.batchSize])
+            result2, result3, result4 = self.session.run(
+                fetches=[self.parameters['AttentionMechanism_2_SR']['AttentionFinal'],
+                         self.parameters['AttentionMechanism_3_SR']['AttentionFinal'],
+                         self.parameters['AttentionMechanism_4_SR']['AttentionFinal']],
+                feed_dict={self.dataInput: batchData, self.dataSeqInput: batchDataSeq,
+                           self.labelInput_SR: batchLabel, self.labelSeqInput_SR: batchLabelSeq})
+            import matplotlib.pylab as plt
+            plt.subplot(111)
+            plt.title('Speech Recognition Attention Map Visualization')
+
+            plt.subplot(131)
+            plt.imshow(result2[0:64, 0:50])
+            plt.xlabel('Conv 2X2')
+            plt.ylabel('Sentence')
+            plt.subplot(132)
+            plt.imshow(result3[0:64, 0:50])
+            plt.xlabel('Frames')
+            plt.ylabel('Conv 3X3')
+            plt.subplot(133)
+            plt.imshow(result4[0:64, 0:50])
+            plt.xlabel('Frames')
+            plt.ylabel('Conv 4X4')
+            # plt.colorbar()
+            plt.show()
+            exit()
