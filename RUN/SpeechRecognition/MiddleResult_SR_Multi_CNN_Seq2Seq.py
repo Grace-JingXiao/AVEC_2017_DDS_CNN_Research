@@ -15,4 +15,5 @@ if __name__ == '__main__':
     classifier = MultiCNN_Seq2Seq(
         trainData=totalData, trainLabel=totalLabel, trainSeq=totalSeq, attention=attention, attentionName=attentionName,
         attentionScope=attentionScope, convSize=[2, 3, 4], learningRate=1E-4, batchSize=128)
+    classifier.Load(loadpath=r'D:\PythonProjects_Data\Exp-SR\MultiCNN_RSA\Network-0069')
     classifier.MiddleResultGeneration(testData=totalData, testLabel=totalLabel, testSeq=totalSeq)
