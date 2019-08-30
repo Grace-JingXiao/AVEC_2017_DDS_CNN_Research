@@ -47,8 +47,10 @@ def RNN_LocalAttentionInitializer(dataInput, seqInput, scopeName, hiddenNoduleNu
         if seqInput is not None:
             with tensorflow.name_scope('AttentionMask'):
                 networkParameter['AttentionMask'] = (tensorflow.sequence_mask(
-                    lengths=seqInput, maxlen=500, dtype=tensorflow.float32) * 2 - tensorflow.ones(
-                    shape=[networkParameter['BatchSize'], 500], dtype=tensorflow.float32)) * 9999
+                    lengths=seqInput, maxlen=networkParameter['TimeStep'],
+                    dtype=tensorflow.float32) * 2 - tensorflow.ones(
+                    shape=[networkParameter['BatchSize'], networkParameter['TimeStep']],
+                    dtype=tensorflow.float32)) * 9999
             networkParameter['AttentionReshapeWithMask'] = tensorflow.minimum(
                 networkParameter['AttentionReshape'], networkParameter['AttentionMask'],
                 name='AttentionReshapeWithMask')
