@@ -139,5 +139,44 @@ def Loader_Text(maxSentence=5):
     return trainData, trainLabel, trainSeq, developData, developLabel, developSeq, testData, testLabel, testSeq
 
 
+def Loader_Text_Raw(maxSentence=5):
+    loadPath = 'D:/PythonProjects_Data/Data_Text_Raw/'
+    labelPath = 'D:/PythonProjects_Data/Data_AVEC2017_CNN/'
+
+    trainData, trainLabel, trainSeq, developData, developLabel, developSeq, \
+    testData, testLabel, testSeq = [], [], [], [], [], [], [], [], []
+
+    for loadPart in ['train', 'dev', 'test']:
+        labelData = numpy.genfromtxt(fname=os.path.join(labelPath, '%sLabel.csv' % loadPart), dtype=int,
+                                     delimiter=',')[1:]
+        for searchIndex in range(min(len(labelData), maxSentence)):
+            with open(os.path.join(loadPath, loadPart, '%d_P.csv' % labelData[searchIndex][0]), 'r') as file:
+                batchData = file.read()
+                batchData = batchData.replace('\n', '')[0:-1]
+            # print(batchData)
+
+            current = []
+            for sample in batchData.split(','):
+                current.append(int(sample))
+
+            if loadPart == 'train':
+                trainData.append(current)
+                trainLabel.append(labelData[searchIndex][2])
+                trainSeq.append(len(current))
+            if loadPart == 'dev':
+                developData.append(current)
+                developLabel.append(labelData[searchIndex][2])
+                developSeq.append(len(current))
+            if loadPart == 'test':
+                testData.append(current)
+                testLabel.append(labelData[searchIndex][2])
+                testSeq.append(len(current))
+
+    print(numpy.shape(trainData), numpy.shape(trainLabel), numpy.shape(trainSeq))
+    print(numpy.shape(developData), numpy.shape(developLabel), numpy.shape(developSeq))
+    print(numpy.shape(testData), numpy.shape(testLabel), numpy.shape(testSeq))
+    return trainData, trainLabel, trainSeq, developData, developLabel, developSeq, testData, testLabel, testSeq
+
+
 if __name__ == '__main__':
-    Loader_Text(maxSentence=999999)
+    Loader_Text_Raw(maxSentence=999999)
