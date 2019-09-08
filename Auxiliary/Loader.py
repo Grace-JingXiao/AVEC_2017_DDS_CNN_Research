@@ -178,5 +178,38 @@ def Loader_Text_Raw(maxSentence=5):
     return trainData, trainLabel, trainSeq, developData, developLabel, developSeq, testData, testLabel, testSeq
 
 
+def Loader_Audio(partName, maxSentence=5):
+    loadPath = 'D:/PythonProjects_Data/AVEC2017-OtherFeatures/Data_%s/' % partName
+    labelPath = 'D:/PythonProjects_Data/Data_AVEC2017_CNN/'
+
+    trainData, trainLabel, trainSeq, developData, developLabel, developSeq, testData, testLabel, testSeq = [], [], [], [], [], [], [], [], []
+
+    for loadPart in ['train', 'dev', 'test']:
+        labelData = numpy.genfromtxt(fname=os.path.join(labelPath, '%sLabel.csv' % loadPart), dtype=int,
+                                     delimiter=',')[1:]
+        for searchIndex in range(min(len(labelData), maxSentence)):
+            batchData = numpy.load(file=os.path.join(loadPath, '%d_P.npy' % labelData[searchIndex][0]))
+            batchSeq = numpy.load(file=os.path.join(loadPath, '%d_P_Seq.npy' % labelData[searchIndex][0]))
+
+            print('Loading', loadPart, labelData[searchIndex][0], numpy.shape(batchData))
+
+            if loadPart == 'train':
+                trainData.append(batchData)
+                trainLabel.append(labelData[searchIndex][2])
+                trainSeq.append(batchSeq)
+            if loadPart == 'dev':
+                developData.append(batchData)
+                developLabel.append(labelData[searchIndex][2])
+                developSeq.append(batchSeq)
+            if loadPart == 'test':
+                testData.append(batchData)
+                testLabel.append(labelData[searchIndex][2])
+                testSeq.append(batchSeq)
+
+    print(numpy.shape(trainData), numpy.shape(trainLabel), numpy.shape(trainSeq))
+    print(numpy.shape(developData), numpy.shape(developLabel), numpy.shape(developSeq))
+    print(numpy.shape(testData), numpy.shape(testLabel), numpy.shape(testSeq))
+    return trainData, trainLabel, trainSeq, developData, developLabel, developSeq, testData, testLabel, testSeq
+
 if __name__ == '__main__':
-    Loader_Text_Raw(maxSentence=999999)
+    Loader_Audio(partName='AUs')
