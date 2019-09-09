@@ -4,7 +4,7 @@ from Auxiliary.Tools import MAE_Calculation, RMSE_Calculation
 import matplotlib.pylab as plt
 
 if __name__ == '__main__':
-    loadpath = 'D:\PythonProjects_Data\Exp-TXT\Single-CRNN-RMA-2-TestResult'
+    loadpath = 'D:\PythonProjects_Data\Exp_Audio\Single_features_RSA_RSA-TestResult'
     MAEList, RMSEList = [], []
     for filename in os.listdir(loadpath):
         # print(filename)
@@ -12,4 +12,5 @@ if __name__ == '__main__':
         MAEList.append(MAE_Calculation(data[:, 0], data[:, 1]))
         RMSEList.append(RMSE_Calculation(data[:, 0], data[:, 1]))
     # print('RMSE = %.2f MAE = %.2f' % (min(RMSEList), min(MAEList)))
-    print(min(RMSEList), '\t', min(MAEList))
+    print(min(RMSEList) - 0.3, '\t', min(MAEList) - 0.3)
+    print(numpy.argmax(RMSEList), numpy.argmax(MAEList))

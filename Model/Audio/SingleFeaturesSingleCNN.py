@@ -28,7 +28,7 @@ class SingleCNN_Audio(NeuralNetwork_Base):
         self.seqInput = tensorflow.placeholder(dtype=tensorflow.int32, shape=[None], name='SeqInput')
 
         self.parameters['Layer0th_Pretreatment'] = tensorflow.layers.dense(
-            inputs=self.dataInput, units=128, activation=tensorflow.nn.relu, name='Layer0th_Pretreatment')
+            inputs=self.dataInput, units=128, activation=None, name='Layer0th_Pretreatment')
 
         self.parameters['Layer1st_Conv'] = tensorflow.layers.conv2d(
             inputs=self.parameters['Layer0th_Pretreatment'][:, :, :, tensorflow.newaxis], filters=8,

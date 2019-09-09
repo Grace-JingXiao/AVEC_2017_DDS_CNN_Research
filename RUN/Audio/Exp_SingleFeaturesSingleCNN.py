@@ -1,5 +1,6 @@
 import os
 import numpy
+import tensorflow
 from Auxiliary.Loader import Loader_Audio
 from Model.Audio.SingleFeaturesSingleCNN import SingleCNN_Audio
 from Model.AttentionMechanism.RNN_StandardAttention import RNN_StandardAttentionInitializer
@@ -7,8 +8,9 @@ from Model.AttentionMechanism.RNN_LocalAttention import RNN_LocalAttentionInitia
 from Model.AttentionMechanism.RNN_MonotonicAttention import RNN_MonotonicAttentionInitializer
 
 if __name__ == '__main__':
+    featuresName = 'features'
     trainData, trainLabel, trainSeq, developData, developLabel, developSeq, testData, testLabel, testSeq = Loader_Audio(
-        partName='AUs', maxSentence=99999)
+        partName=featuresName, maxSentence=99999)
     firstAttention = RNN_StandardAttentionInitializer
     firstAttentionName = 'RSA'
     firstAttentionScope = None
@@ -16,12 +18,13 @@ if __name__ == '__main__':
     secondAttentionName = 'RSA'
     secondAttentionScope = None
 
-    savepath = 'D:/PythonProjects_Data/Exp_Audio/Single_%s_%s' % (firstAttentionName, secondAttentionName)
+    savepath = 'D:/PythonProjects_Data/Exp_Audio/Single_%s_%s_%s' % (
+        featuresName, firstAttentionName, secondAttentionName)
 
     classifier = SingleCNN_Audio(
         trainData=trainData, trainSeq=trainSeq, trainLabel=trainLabel, firstAttention=firstAttention,
         firstAttentionName=firstAttentionName, firstAttentionScope=firstAttentionScope, secondAttention=secondAttention,
-        secondAttentionName=secondAttentionName, secondAttentionScope=secondAttentionScope)
+        secondAttentionName=secondAttentionName, secondAttentionScope=secondAttentionScope, convSize=3)
 
     os.makedirs(savepath)
     os.makedirs(savepath + '-TestResult')
